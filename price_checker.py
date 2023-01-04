@@ -2,8 +2,31 @@ import requests
 from bs4 import BeautifulSoup as bsp
 import configparser
 import os
+import time
+import argparse
 
 cfg = configparser.ConfigParser()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-log', action='store_true', help='enable logging')
+args = parser.parse_args()
+
+logging = False
+
+if args.log:
+    logging = True
+
+def execution_time(show_time = logging):
+    def timer(func):
+        def time_counting(*args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            end = time.perf_counter()
+            if show_time:
+                print(f"The request was made in {end - start:.3f} seconds")
+            return result
+        return time_counting
+    return timer
 
 def configuration():
     """
@@ -49,6 +72,7 @@ def get_input():
 
     return url, option
 
+@execution_time(show_time = logging)
 def make_request(url):
     """
         This function is used to make the request and return it as a beautifulsoup object.
@@ -69,7 +93,6 @@ def analyze_request(soup):
         print the title and meta data for the page.
     """
     if not soup.title.__contains__('OLX'):
-        print('here')
         for items in soup.find_all('div', {'data-cy': 'l-card'}):
             for item, price in zip(items.find_all('h6', {'class': 'css-ervak4-TextStyled er34gjf0'}), items.find_all('p', {'data-testid':'ad-price'})):
                 print(item.text, price.text, sep=" -> ")
