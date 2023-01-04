@@ -1,4 +1,3 @@
-import webbrowser
 import requests
 from bs4 import BeautifulSoup as bsp
 import configparser
@@ -18,6 +17,7 @@ def configuration():
     if not os.path.exists('config.ini'):
         cfg.add_section('Request Options')
         cfg.set('Request Options', 'URL', '')
+        cfg.set('Request Options', 'item', '')
         with open('config.ini', 'w') as configfile:
             cfg.write(configfile)
             configfile.close()    
@@ -44,26 +44,41 @@ def get_input():
         url = input("Enter the URL: ")
     elif option == '2':
         url = cfg.get('Request Options', 'URL')
-        
+    if url.__contains__('olx') and (option == '1' or cfg.get('Request Options', 'item') == ''):
+        cfg.set('Request Options', 'item', input("Type what item you want to search: "))
+
     return url, option
 
 def make_request(url):
     """
         This function is used to make the request and return it as a beautifulsoup object.
     """
-    response = requests.get(url)
+    if not url.__contains__('https://wwww'):
+        url = f'https://www.{url}'
+    if not url.__contains__('olx') or cfg.get('Request Options', 'item') == '':
+        response = requests.get(url)
+    else:
+        url = f'{url}/d/oferte/q-{cfg.get("Request Options", "item").replace(" ", "-")}/?search[order]=filter_float_price:asc'
+        response = requests.get(url)
     soup = bsp(response.text, 'html.parser')
     return soup
-
+    
 def analyze_request(soup):
     """
         This function will get the request response of the request as BeautifulSoup object and
         print the title and meta data for the page.
     """
-    print(soup.title)
-    for meta in soup.find_all('meta'):
-        print(meta)
-
+    if not soup.title.__contains__('OLX'):
+        print('here')
+        for items in soup.find_all('div', {'data-cy': 'l-card'}):
+            for item, price in zip(items.find_all('h6', {'class': 'css-ervak4-TextStyled er34gjf0'}), items.find_all('p', {'data-testid':'ad-price'})):
+                print(item.text, price.text, sep=" -> ")
+    else:
+        print(soup.title)
+        for meta in soup.find_all('meta'):
+            print(meta)
+        
+    
 
 if __name__ == '__main__':
     configuration()
@@ -77,4 +92,4 @@ if __name__ == '__main__':
             with open('config.ini', 'w') as configfile:
                 cfg.write(configfile)
                 configfile.close()
-        
+    
